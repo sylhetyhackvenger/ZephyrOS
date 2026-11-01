@@ -922,9 +922,6 @@ ZephyrOS 11.1.0 · built by SYLHETYHACKVENGER (THE-ERROR808)
 
 Prove the mask. Understand the leak. Stay authorized.
 
-```
-account recon  ·  login flow  ·  deobfuscation
-──────────────────────────────────────────────
-```
+
 
 </div>
