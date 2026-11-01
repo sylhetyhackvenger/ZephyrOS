@@ -59,7 +59,7 @@ Table of Contents
 🎯 What ZephyrOS Does
 
 ZephyrOS is a single-file Python reconnaissance and analysis tool that inspects how a web application masks, obfuscates, or leaks account-related data through its login flow, public profile endpoints, and client-side assets.
-it can be non-deterministic to some sites.
+it can be non-deterministic to some modern sites.
 
 It answers questions like:
 
