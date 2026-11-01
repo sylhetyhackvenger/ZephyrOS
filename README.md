@@ -5,9 +5,28 @@
 <div align="center">
 
 # ZephyrOS - Account Recon · Login Flow Probing · Client-Side Deobfuscation
+<div align="center">
 
+<!-- Row 1: Core identity -->
+[![Version](https://img.shields.io/badge/version-1.0.0-00CED1?style=for-the-badge&labelColor=0d1117&logo=shield&logoColor=00CED1)](https://github.com/)
+[![Python](https://img.shields.io/badge/python-3.9+-3776AB?style=for-the-badge&labelColor=0d1117&logo=python&logoColor=3776AB)](https://python.org)
+[![License](https://img.shields.io/badge/license-authorized%20use%20only-FF2D55?style=for-the-badge&labelColor=0d1117&logo=bookstack&logoColor=FF2D55)]()
 
-An authorized-testing toolkit for analyzing data masking, obfuscation, and client-side credential exposure on login flows — built for lab, CTF, and bug-bounty engagements.
+<!-- Row 2: Author + platform -->
+[![Author](https://img.shields.io/badge/author-SYLHETYHACKVENGER-FF00FF?style=for-the-badge&labelColor=0d1117&logo=github&logoColor=FF00FF)](https://github.com/)
+[![THE-ERROR808](https://img.shields.io/badge/alias-THE--ERROR808-9D00FF?style=for-the-badge&labelColor=0d1117&logo=gnometerminal&logoColor=9D00FF)](https://github.com/)
+[![Platform](https://img.shields.io/badge/platform-linux%20%7C%20macos%20%7C%20windows-00E5FF?style=for-the-badge&labelColor=0d1117&logo=linux&logoColor=00E5FF)]()
+
+<!-- Row 3: Capability strip -->
+[![Recon](https://img.shields.io/badge/account-recon-00FFAA?style=for-the-badge&labelColor=0d1117&logo=target&logoColor=00FFAA)](https://github.com/)
+[![Login Flow](https://img.shields.io/badge/login-flow%20probe-FFB000?style=for-the-badge&labelColor=0d1117&logo=key&logoColor=FFB000)](https://github.com/)
+[![Deobfuscation](https://img.shields.io/badge/js%2Fhtml-deobfuscation-FF5E5E?style=for-the-badge&labelColor=0d1117&logo=javascript&logoColor=FF5E5E)](https://github.com/)
+
+<!-- Row 4: Safety + status -->
+[![Authorized Only](https://img.shields.io/badge/⚠️-authorized%20testing%20only-FF2D55?style=for-the-badge&labelColor=0d1117)](https://github.com/)
+[![Self-Test](https://img.shields.io/badge/self--test-38%2F38%20passing-00FF88?style=for-the-badge&labelColor=0d1117&logo=checkmarx&logoColor=00FF88)](https://github.com/)
+[![Status](https://img.shields.io/badge/status-stable-00CED1?style=for-the-badge&labelColor=0d1117&logo=statuspage&logoColor=00CED1)]()
+
 
 </div>
 
