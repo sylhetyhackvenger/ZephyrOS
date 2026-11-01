@@ -145,8 +145,8 @@ ZephyrOS ships as a single file (zephyros.py or 10.py), so no packaging step is 
 1. Clone and enter the directory
 
 ```bash
-git clone https://github.com/your-org/zephyros.git
-cd zephyros
+git clone https://github.com/sylhetyhackvenger/ZephyrOS
+cd ZephyrOS 
 ```
 
 2. Create a virtual environment (recommended)
@@ -194,7 +194,7 @@ You should see N/N checks passed if everything is wired up correctly.
 
 ---
 
-🧰 Installation of Companion Tools
+🧰 Installation of Companion Tools using them you can practice more fundamentals 
 
 ZephyrOS produces raw artifacts (deobfuscated.html, deobfuscated.js, pause.js, pause_runner.py) that pair well with three well-known open-source tools. Installing them locally dramatically improves your manual verification workflow.
 
@@ -914,14 +914,597 @@ ZephyrOS is distributed for authorized security research and defensive engineeri
 
 By using this software, you accept full responsibility for ensuring your activity is lawful in your jurisdiction and covered by a valid engagement.
 
+ZephyrOS — Results & Outcomes: Real-World Examples
+
+This document shows concrete outputs you can expect from ZephyrOS in different scenarios. Every example is realistic (values fictionalized) and matches the actual report schema produced by v11.1.0.
+
+---
+
+📊 Scenario 1 — Fully Masked, Well-Hardened Target
+
+Command
+
+```bash
+./zephyros.py \
+  --base-url https://secure.bank.example \
+  --identifier jdoe@example.com \
+  --password 'CorrectHorseBatteryStaple' \
+  --known-email jdoe@example.com \
+  --operator jdoe --authorization-reference TICKET-4471 \
+  --env lab --i-have-written-authorization \
+  --report bank_report.json
+```
+
+Console Output (abridged)
+
+```
+[target] validating secure.bank.example
+[target] ipv4=['203.0.113.42'] ipv6=[] domain=example.com subdomain=secure.bank
+[client_side] step 2: client-side deobfuscation
+[client_fetch] page: HTTP 200 (48213 bytes)
+[html] inline scripts: 1, external scripts: 3
+[script] fetched 3 external scripts
+[js_pass]   app.js: no obfuscation passes matched
+[client_side] skimmer hits: 0 (HIGH: 0)
+[client_side] phishing hits: 0 (HIGH: 0)
+[discover_start] fetching robots.txt
+[discover_start] probing openapi
+[recon] step 4: account recon (public profile + id + visibility)
+[recon] no public endpoint leaked the profile
+[login_probe] step 5-6: probing login endpoint (wrong password)
+[login_probe] HTTP 401 fields=['password'] preview='{"error":"Invalid credentials"}'
+[login_probe] login response was usable; forgot-password probe skipped
+[enum_start] step 7: enumeration probes
+[enum_start] identifier type=email baseline_len=27 safe_only=True
+[enum_start] safe_only mode: skipping login_diff and forgot_password
+[enum_finding] check_username: check_endpoint_consistent
+[enum_finding] public_profile: profile_consistent
+[done] scan complete
+[saved] report -> bank_report.json
+```
+
+Key Results in Report
+
+```jsonc
+{
+  "status": "ok",
+  "request_count": 22,
+  "technique_contracts": {
+    "partial_masking":          { "detected": false, "attempted": true },
+    "format_preserving_masking":{ "detected": false, "attempted": true },
+    "full_redaction":           { "detected": false, "attempted": true },
+    "enumeration_login_diff":   { "detected": false, "attempted": false },
+    "enumeration_check_endpoint":{ "detected": false, "attempted": true },
+    "client_js_obfuscation":    { "detected": false, "attempted": true },
+    "client_skimmer":           { "detected": false, "attempted": true }
+  },
+  "profile_findings": [
+    {
+      "field": "user.email",
+      "original_value": "j***@example.com",
+      "classification": {
+        "technique_id": "partial_masking",
+        "confidence": 0.55,
+        "algorithmically_reversible": true,
+        "authorized_recovery_available": true,
+        "recovery_path": "known_plaintext"
+      },
+      "mask_analyses": [
+        {
+          "method_family": "format_aware",
+          "confidence": 0.94,
+          "ci": [0.88, 0.99],
+          "candidates": ["jdoe", "jdoe1", "jdoe2"]
+        }
+      ]
+    }
+  ],
+  "account_recon": { "public_endpoint": null, "visibility": "unknown" }
+}
+```
+
+🎯 Verdict
+
+Target is well hardened. Profile is only reachable when authenticated, emails are partially masked with format-preserving masking, no enumeration oracle exists (all check endpoints return identical responses for real and fake users), no client-side obfuscation, no skimmer, no phishing form.
+
+Action for the bug-bounty triager: this is a clean report — nothing actionable. request_count: 22 shows we exited politely.
+
+---
+
+🚨 Scenario 2 — Enumeration + Skimmer + Phishing (High-Value Finding)
+
+Command
+
+```bash
+./zephyros.py \
+  --base-url https://staging.shop.example \
+  --identifier alice.wong \
+  --operator jdoe --authorization-reference BB-2025-0087 \
+  --env staging --i-have-written-authorization \
+  --client-max-scripts 40 \
+  --report shop_report.json --json-out
+```
+
+Console Output (excerpt — findings only)
+
+```
+[recon] public endpoint: /api/users/alice.wong
+[recon] id=10042 (numeric) visibility=public public_fields=8/23
+[recon]   username: alice.wong
+[recon]   email: al***@shop.example
+[recon]   phone: +1***4567
+[recon]   created_at: 2021-04-12T08:33:19Z
+
+[login_probe] HTTP 401 fields=['password'] preview='{"error":"wrong password"}'
+[deobf] login response obfuscated: trail=['base64'] decoded_len=142
+
+[enum_start] step 7: enumeration probes
+[enum_finding] login_error_diff: login_error_differs
+[enum_finding] forgot_password: forgot_password_differs
+[enum_finding] check_username: check_endpoint_differs
+[enum_finding] public_profile: profile_differs
+
+[client_side] skimmer hits: 4 (HIGH: 2)
+[skimmer] checkout.js: credential-exfil-flow (field reads + network sink co-occur)
+[skimmer] checkout.js: keystroke-exfil-flow (keyboard listener + network sink co-occur)
+[phishing] form-action-off-origin (https://pay.attacker.example/steal)
+[done] scan complete
+```
+
+Key Findings in Report
+
+```jsonc
+{
+  "status": "ok",
+  "request_count": 58,
+  "account_recon": {
+    "public_endpoint": "/api/users/alice.wong",
+    "id": "10042",
+    "id_shape": "numeric",
+    "visibility": "public",
+    "public_fields": {
+      "user.username": "alice.wong",
+      "user.email": "al***@shop.example",
+      "user.phone": "+1***4567",
+      "user.created_at": "2021-04-12T08:33:19Z"
+    }
+  },
+  "enumeration": {
+    "findings": {
+      "login_error_diff": {
+        "verdict": "login_error_differs",
+        "diff": {
+          "status": { "with_identifier": 401, "with_baseline": 404 },
+          "body_differs": true
+        }
+      },
+      "forgot_password": {
+        "endpoint": "/api/forgot-password",
+        "verdict": "forgot_password_differs"
+      },
+      "check_username": {
+        "endpoint": "GET /api/users/exists?username={id}",
+        "verdict": "check_endpoint_differs",
+        "diff": { "status": { "with_identifier": 200, "with_baseline": 404 } }
+      },
+      "public_profile": {
+        "verdict": "profile_differs"
+      }
+    }
+  },
+  "client_side": {
+    "skimmer_hits": [
+      {
+        "pattern": "credential-exfil-flow",
+        "verdict": "HIGH",
+        "script": "checkout.js",
+        "note": "field reads + network sink co-occur",
+        "sample": "…document.querySelector('#cc-number')…fetch('https://c2.attacker…"
+      },
+      {
+        "pattern": "keystroke-exfil-flow",
+        "verdict": "HIGH",
+        "script": "checkout.js"
+      }
+    ],
+    "phishing_hits": [
+      {
+        "type": "form-action-off-origin",
+        "action": "https://pay.attacker.example/steal",
+        "method": "post",
+        "has_password": true,
+        "verdict": "HIGH"
+      }
+    ]
+  },
+  "technique_contracts": {
+    "enumeration_login_diff":    { "detected": true, "attempted": true },
+    "enumeration_forgot_password":{ "detected": true, "attempted": true },
+    "enumeration_check_endpoint":{ "detected": true, "attempted": true },
+    "enumeration_public_profile":{ "detected": true, "attempted": true },
+    "client_skimmer":            { "detected": true, "attempted": true },
+    "client_phishing":           { "detected": true, "attempted": true },
+    "account_visibility_public": { "detected": true, "attempted": true },
+    "account_id_type_numeric":   { "detected": true, "attempted": true }
+  }
+}
+```
+
+🎯 Verdict
+
+Critical findings — this is what ZephyrOS is built to surface:
+
+1. Full enumeration oracle — three independent endpoints leak user existence.
+2. Live skimmer on /checkout — captured credit-card fields and beacons to a C2.
+3. Off-origin phishing form with password input.
+
+Recommended next step: escalate immediately. Save the JSON report + zephyros_out/deobfuscated.js (contains the deobfuscated skimmer) as evidence. Notify the target security team through the engagement channel. Do not interact with the C2 domain.
+
+---
+
+🔓 Scenario 3 — Recoverable Masked Email via Known-Plaintext
+
+Setup
+
+Target returns jo***@example.com. You know from the client brief that the user's first name is john.
+
+Command
+
+```bash
+./zephyros.py \
+  --base-url https://lab.example.com \
+  --identifier john@example.com \
+  --password 'x' \
+  --known-email john@example.com \
+  --known-name "John" \
+  --training training_pairs.json \
+  --i-have-written-authorization --env lab \
+  --report recovery_report.json
+```
+
+Recovery Report Excerpt
+
+```jsonc
+{
+  "profile_findings": [
+    {
+      "field": "user.email",
+      "original_value": "jo***@example.com",
+      "mask_analyses": [
+        {
+          "method_family": "beginner_fixed_mask",
+          "confidence": 0.45,
+          "details": {
+            "prefix": "jo",
+            "suffix": "@example.com",
+            "masked_symbol_count": 3,
+            "mask_is_fixed_width": true,
+            "length_reported": "unknown_fixed_width",
+            "leak_note": "Fixed-width padding hides original length; do not infer length from symbol count."
+          }
+        },
+        {
+          "method_family": "format_aware",
+          "confidence": 0.61,
+          "ci": [0.51, 0.71],
+          "candidates": ["john", "johnd", "john_", "joe", "joan", "johanna"]
+        },
+        {
+          "method_family": "learned_rule_bayesian",
+          "confidence": 0.83,
+          "ci": [0.78, 0.88],
+          "details": {
+            "learned_from": "john@example.com",
+            "learned_mask": "jo***@example.com",
+            "skeleton_similarity": 1.0,
+            "rule_agreement": 1.0,
+            "rule_count": 12
+          },
+          "candidates": ["john"]
+        }
+      ],
+      "plausibility": {
+        "plausibility": 0.0042,
+        "verdict": "plausible_real_value"
+      }
+    }
+  ]
+}
+```
+
+🎯 Verdict
+
+Recovery successful with high confidence (0.83). The mask leaks 2 leading characters (jo) and the full domain. Given known plaintext (john@example.com), the Bayesian ranker reconstructs the local-part as john with an 83 % posterior probability and a tight CI [0.78, 0.88].
+
+Implication: format-preserving masking that leaks a prefix is a recovery-risk technique. Even short prefixes can be brute-forced with a name dictionary — the training_pairs corpus turns this into a one-shot recovery for known users.
+
+---
+
+📈 Scenario 4 — Differential Privacy Detected via Repeated Reads
+
+Command
+
+```bash
+./zephyros.py \
+  --base-url https://analytics.example.com \
+  --identifier demo.user \
+  --password 'x' \
+  --repeat-reads 10 \
+  --i-have-written-authorization --env lab \
+  --report dp_report.json
+```
+
+Report Excerpt
+
+```jsonc
+{
+  "repeated_read": {
+    "user.reputation_score": {
+      "verdict": "numeric_noise",
+      "samples": 10,
+      "mean": 4823.7,
+      "variance": 312.88,
+      "noise_scale_laplace_b": 12.51,
+      "noise_scale_gaussian_sigma": 17.69,
+      "sensitivity_assumption": null,
+      "epsilon_laplace_if_sensitivity_1": 0.0799,
+      "epsilon_gaussian_if_sensitivity_1_delta_1e-5": 0.4096
+    },
+    "user.account_tier": {
+      "verdict": "stable",
+      "samples": 10
+    },
+    "user.last_login_country": {
+      "verdict": "categorical_noise",
+      "samples": 10,
+      "unique_values": 7
+    }
+  },
+  "technique_contracts": {
+    "differential_privacy_noise": { "detected": true, "attempted": true }
+  }
+}
+```
+
+🎯 Verdict
+
+Two fields are DP-protected, one is not:
+
+· reputation_score — clean Laplacian noise (b = 12.51), consistent with ε ≈ 0.08 at sensitivity = 1.
+· account_tier — perfectly stable, not DP-protected. This field is a privacy risk if combined with the DP-noised reputation.
+
+Implication: if account_tier is public and quasi-identifying, an attacker can mount a differencing attack against reputation_score across two accounts to strip DP noise. Recommend the target DP-protect account_tier too, or reduce its cardinality.
+
+---
+
+🧬 Scenario 5 — Client-Side Packer + Control-Flow Flattening
+
+Command
+
+```bash
+./zephyros.py --pause-only \
+  --login-page https://staging.example.com/login \
+  --client-out-dir ./instrument
+```
+
+(Followed by a full scan.)
+
+Console Output
+
+```
+[instrument] target: https://staging.example.com/login
+[instrument] writing pause-before-transmit instrumentation
+[instrument]   pause.js -> ./instrument/pause.js
+[instrument]   pause_runner.py -> ./instrument/pause_runner.py
+[saved] pause_js -> ./instrument/pause.js
+[saved] pause_runner -> ./instrument/pause_runner.py
+[instrument] next: pip install playwright && python ./instrument/pause_runner.py https://staging.example.com/login ./instrument/pause.js
+```
+
+JS Deobfuscation Result
+
+```jsonc
+{
+  "client_side": {
+    "js_findings": {
+      "control_flow_flattening": [
+        {
+          "order_var": "_0x3f2a",
+          "case_order": ["3", "1", "2", "0"],
+          "switch_index_var": "_0x1b8c",
+          "script": "app.4f8a.js"
+        }
+      ],
+      "dead_vars": [
+        { "var": "_0x1abc", "declaration_pos": 1284, "script": "app.4f8a.js" },
+        { "var": "_0x2def", "declaration_pos": 8841, "script": "app.4f8a.js" }
+      ],
+      "per_script": [
+        {
+          "name": "app.4f8a.js",
+          "original_len": 184320,
+          "deobfuscated_len": 41208,
+          "passes": [
+            { "round": 1, "pass": "ArrayRotationPass", "findings": [{ "array_name": "_0x4a2c", "elements": 284, "rotation": 47 }] },
+            { "round": 1, "pass": "StringArrayResolverPass", "resolved": 812 },
+            { "round": 2, "pass": "EvalUnnestPass", "depth": 2 },
+            { "round": 3, "pass": "StringConcatFoldPass", "before_len": 51200, "after_len": 41208 }
+          ]
+        }
+      ]
+    }
+  }
+}
+```
+
+🎯 Verdict
+
+obfuscator.io-style bundle (app.4f8a.js):
+
+· 284-element string array with 47 rotations
+· 812 string-array lookups resolved
+· 2 eval layers removed
+· 2 dead variables stripped
+· 77.7 % size reduction (184 KB → 41 KB)
+
+Cross-verification: feed zephyros_out/deobfuscated.js into webcrack and REstringer for a second opinion — all three should land on similar identifier names.
+
+```bash
+webcrack zephyros_out/deobfuscated.js --unpack --unminify -o webcrack_out
+restringer zephyros_out/deobfuscated.js -o restringer_out.js
+diff webcrack_out/app.js restringer_out.js | head -40
+```
+
+---
+
+🚧 Scenario 6 — Guard Triggered (WAF Active)
+
+Command
+
+```bash
+./zephyros.py \
+  --base-url https://prod.example.com \
+  --identifier test --env prod --confirm-prod \
+  --i-have-written-authorization \
+  --guard-tolerance 1 \
+  --report prod_report.json
+```
+
+Console Output
+
+```
+[target] validating prod.example.com
+[target] ipv4=['198.51.100.7'] ipv6=[] domain=example.com
+[client_side] step 2: client-side deobfuscation
+[client_fetch] page: HTTP 200 (12840 bytes)
+[html] inline scripts: 0, external scripts: 0
+[discover_start] fetching robots.txt
+[http] GET https://prod.example.com/api/login
+[http]   -> 403 (241 bytes)
+[guard_triggered] HTTP 403 at https://prod.example.com/api/login; guard tolerance 1 reached.
+[stop] Protection triggered at https://prod.example.com/api/login: HTTP 403.
+[saved] report -> prod_report.json
+```
+
+Report Excerpt
+
+```jsonc
+{
+  "status": "guard",
+  "request_count": 4,
+  "soft_guard_count": 0,
+  "hard_guard_count": 1,
+  "guard_hits": [
+    {
+      "ts": "2025-01-01T12:34:56.789+00:00",
+      "url": "https://prod.example.com/api/login",
+      "status": 403,
+      "soft": false
+    }
+  ],
+  "exception": {
+    "type": "GuardTriggeredError",
+    "msg": "Protection triggered at https://prod.example.com/api/login: HTTP 403."
+  }
+}
+```
+
+🎯 Verdict
+
+Exit code 2 (EXIT_GUARD). The WAF blocked our very first login probe. ZephyrOS stopped immediately — no retry, no bypass attempt.
+
+What to do: This is a hard stop. Either (a) the target is not covered by your engagement, (b) you're missing required auth headers, or (c) the WAF is rate-limiting your IP. Do not lower --guard-tolerance or add retries — that's how authorized tests accidentally become incidents.
+
+---
+
+🎨 Scenario 7 — --dry-run Smoke Test
+
+Command
+
+```bash
+./zephyros.py \
+  --base-url https://lab.example.com \
+  --identifier jdoe \
+  --dry-run --i-have-written-authorization --env lab \
+  --report dry.json
+```
+
+Console Output
+
+```
+[target] validating lab.example.com
+[target] reachable=True ipv4=['10.0.0.12']
+[discover_start] probing openapi
+[login_probe] POST /api/login fields=['username']
+[login_probe] HTTP 400 fields=['password','username'] preview='…'
+[done] scan complete
+[saved] report -> dry.json
+```
+
+Report Excerpt
+
+```jsonc
+{
+  "dry_run": true,
+  "status": "ok",
+  "request_count": 8,
+  "access_control": {
+    "test": "unauthenticated_access",
+    "url": "https://lab.example.com/api/me",
+    "expected": "401 or 403",
+    "actual": 401,
+    "passed": true
+  }
+}
+```
+
+🎯 Verdict
+
+Use --dry-run before every engagement. It:
+
+· Confirms the target is reachable
+· Verifies auth headers work
+· Confirms unauthenticated access is properly blocked (passed: true)
+· Costs 8 requests total
+· Never sends enumeration probes (no attack surface touched)
+
+---
+
+📋 Outcome Cheat Sheet
+
+Report Signal Exit Code Meaning Typical Action
+status: ok + all detected: false 0 Well-hardened target, no issues Archive report
+status: ok + partial_masking detected 0 Weak masking (recovery-risk) Report as info leak
+status: ok + enumeration_*: detected 0 Username enumeration oracle File finding
+status: ok + client_skimmer: detected 0 🚨 Credential skimmer Escalate immediately
+status: ok + client_phishing: detected 0 🚨 Off-origin phishing Escalate immediately
+status: ok + differential_privacy_noise 0 DP-protected field identified Confirm ε with owner
+status: guard 2 WAF blocked us Stop, verify authorization
+status: auth_refused 3 No authorization / login refused Fix headers or permission
+status: scope 4 Outside allow-list / budget hit Review --allowed-hosts
+status: interrupt 5 Ctrl-C during scan Report is still valid
+status: error 1 Unexpected failure Check exception field
+
+---
+
+🔁 Replaying a Run
+
+Every report embeds log (full audit trail) + log_sha256 (integrity). To reproduce:
+
+```bash
+jq -r '.target, .mode, .identifier.type, .request_budget' report.json
+# Rebuild the exact invocation from those values
+./zephyros.py --base-url <target> --identifier <id> --env <env> ...
+```
+
+Note: Targets change. Reproducing a week later may yield different detection results even with identical flags. That's expected — that's what dependencies + log_sha256 are for: proving what you saw, when you saw it.
+
 ---
 
 <div align="center">
 
-ZephyrOS 11.1.0 · built by SYLHETYHACKVENGER (THE-ERROR808)
+ZephyrOS by SYLHETYHACKVENGER (THE-ERROR808)
 
 Prove the mask. Understand the leak. Stay authorized.
-
-
 
 </div>
