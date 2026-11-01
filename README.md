@@ -1,8 +1,10 @@
-ZephyrOS
+<p align="center">
+  <img src="assets/1.png" alt="Banner 1" width="100%">
+</p>
 
 <div align="center">
 
-Account Recon · Login Flow Probing · Client-Side Deobfuscation
+# ZephyrOS - Account Recon · Login Flow Probing · Client-Side Deobfuscation
 
 https://img.shields.io/badge/version-11.1.0-cyan?style=flat-square
 https://img.shields.io/badge/python-3.9+-blue?style=flat-square&logo=python
