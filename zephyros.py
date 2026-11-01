@@ -57,7 +57,7 @@ except ImportError:
 
 warnings.filterwarnings("ignore", category=UserWarning, module="getpass")
 
-VERSION = "11.1.0"
+VERSION = "1.0.0"
 ZEPHYR_AUTHOR = "SYLHETYHACKVENGER (THE-ERROR808)"
 
 EXIT_OK = 0
