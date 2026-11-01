@@ -1,0 +1,16 @@
+# ============================================================
+# ZephyrOS v11.1.0 — Core Requirements
+# Authorized testing only: lab / CTF / bug bounty engagements
+# ============================================================
+
+# --- Required ---------------------------------------------------
+requests>=2.31.0,<3.0.0
+urllib3>=2.0.0,<3.0.0
+certifi>=2023.7.22
+
+# --- Optional (improves DNS fallback in TargetValidator) --------
+dnspython>=2.4.0,<3.0.0
+
+# --- Optional (for client-side pause instrumentation) ----------
+# Uncomment if you plan to use --pause-only + pause_runner.py
+# playwright>=1.40.0
