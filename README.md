@@ -6,10 +6,6 @@
 
 # ZephyrOS - Account Recon · Login Flow Probing · Client-Side Deobfuscation
 
-https://img.shields.io/badge/version-11.1.0-cyan?style=flat-square
-https://img.shields.io/badge/python-3.9+-blue?style=flat-square&logo=python
-https://img.shields.io/badge/license-Authorized%20Use%20Only-red?style=flat-square
-https://img.shields.io/badge/author-SYLHETYHACKVENGER%20(THE--ERROR808)-magenta?style=flat-square
 
 An authorized-testing toolkit for analyzing data masking, obfuscation, and client-side credential exposure on login flows — built for lab, CTF, and bug-bounty engagements.
 
